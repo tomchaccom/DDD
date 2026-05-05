@@ -1,11 +1,13 @@
 package com.example.DDD.presentation;
 
 import com.example.DDD.application.dto.request.CommentCreateRequest;
+import com.example.DDD.application.dto.request.CommentEditRequest;
 import com.example.DDD.application.dto.request.PostCreateRequest;
 import com.example.DDD.application.dto.request.PostEditRequest;
 import com.example.DDD.application.dto.response.CommentResponse;
 import com.example.DDD.application.dto.response.PostResponse;
-import com.example.DDD.application.service.PostService;
+import com.example.DDD.application.service.PostCommandService;
+import com.example.DDD.application.service.PostQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,23 +20,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PostController {
 
-    private final PostService postService;
+    private final PostCommandService postCommandService;
+    private final PostQueryService postQueryService;
 
-    @PostMapping
-    public ResponseEntity<PostResponse> createPost(@RequestBody PostCreateRequest request) {
-        PostResponse response = postService.createPost(request);
-        return ResponseEntity.created(URI.create("/api/posts/" + response.id()))
-                .body(response);
+    // === Query (읽기) ===
+
+    @GetMapping
+    public ResponseEntity<List<PostResponse>> getAllPosts() {
+        return ResponseEntity.ok(postQueryService.getAllPosts());
     }
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(@PathVariable Long postId) {
-        return ResponseEntity.ok(postService.getPost(postId));
+        return ResponseEntity.ok(postQueryService.getPost(postId));
     }
 
-    @GetMapping
-    public ResponseEntity<List<PostResponse>> getAllPosts() {
-        return ResponseEntity.ok(postService.getAllPosts());
+    // === Command (쓰기) ===
+
+    @PostMapping
+    public ResponseEntity<PostResponse> createPost(@RequestBody PostCreateRequest request) {
+        PostResponse response = postCommandService.createPost(request);
+        return ResponseEntity.created(URI.create("/api/posts/" + response.id()))
+                .body(response);
     }
 
     @PatchMapping("/{postId}")
@@ -42,7 +49,7 @@ public class PostController {
             @PathVariable Long postId,
             @RequestBody PostEditRequest request
     ) {
-        return ResponseEntity.ok(postService.editPost(postId, request));
+        return ResponseEntity.ok(postCommandService.editPost(postId, request));
     }
 
     @DeleteMapping("/{postId}")
@@ -50,21 +57,30 @@ public class PostController {
             @PathVariable Long postId,
             @RequestParam Long requesterId
     ) {
-        postService.deletePost(postId, requesterId);
+        postCommandService.deletePost(postId, requesterId);
         return ResponseEntity.noContent().build();
     }
 
-    // === 댓글 (Post Aggregate Root 하위 리소스) ===
+    // === Command — 댓글 (Post Aggregate Root 하위 리소스) ===
 
     @PostMapping("/{postId}/comments")
     public ResponseEntity<CommentResponse> addComment(
             @PathVariable Long postId,
             @RequestBody CommentCreateRequest request
     ) {
-        CommentResponse response = postService.addComment(postId, request);
+        CommentResponse response = postCommandService.addComment(postId, request);
         return ResponseEntity.created(
                 URI.create("/api/posts/" + postId + "/comments/" + response.id())
         ).body(response);
+    }
+
+    @PatchMapping("/{postId}/comments/{commentId}")
+    public ResponseEntity<CommentResponse> editComment(
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @RequestBody CommentEditRequest request
+    ) {
+        return ResponseEntity.ok(postCommandService.editComment(postId, commentId, request));
     }
 
     @DeleteMapping("/{postId}/comments/{commentId}")
@@ -73,7 +89,7 @@ public class PostController {
             @PathVariable Long commentId,
             @RequestParam Long requesterId
     ) {
-        postService.removeComment(postId, commentId, requesterId);
+        postCommandService.removeComment(postId, commentId, requesterId);
         return ResponseEntity.noContent().build();
     }
 }

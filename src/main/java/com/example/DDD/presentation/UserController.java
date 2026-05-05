@@ -3,7 +3,8 @@ package com.example.DDD.presentation;
 import com.example.DDD.application.dto.request.UserCreateRequest;
 import com.example.DDD.application.dto.request.UserUpdateRequest;
 import com.example.DDD.application.dto.response.UserResponse;
-import com.example.DDD.application.service.UserService;
+import com.example.DDD.application.service.UserCommandService;
+import com.example.DDD.application.service.UserQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,23 +17,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserService userService;
+    private final UserCommandService userCommandService;
+    private final UserQueryService userQueryService;
 
-    @PostMapping
-    public ResponseEntity<UserResponse> createUser(@RequestBody UserCreateRequest request) {
-        UserResponse response = userService.createUser(request);
-        return ResponseEntity.created(URI.create("/api/users/" + response.id()))
-                .body(response);
-    }
+    // === Query (읽기) ===
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(userService.getUser(userId));
+        return ResponseEntity.ok(userQueryService.getUser(userId));
     }
 
     @GetMapping
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+        return ResponseEntity.ok(userQueryService.getAllUsers());
+    }
+
+    // === Command (쓰기) ===
+
+    @PostMapping
+    public ResponseEntity<UserResponse> createUser(@RequestBody UserCreateRequest request) {
+        UserResponse response = userCommandService.createUser(request);
+        return ResponseEntity.created(URI.create("/api/users/" + response.id()))
+                .body(response);
     }
 
     @PatchMapping("/{userId}")
@@ -40,12 +46,12 @@ public class UserController {
             @PathVariable Long userId,
             @RequestBody UserUpdateRequest request
     ) {
-        return ResponseEntity.ok(userService.updateUser(userId, request));
+        return ResponseEntity.ok(userCommandService.updateUser(userId, request));
     }
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
-        userService.deleteUser(userId);
+        userCommandService.deleteUser(userId);
         return ResponseEntity.noContent().build();
     }
 }

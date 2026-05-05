@@ -70,7 +70,8 @@ public class Post {
     /**
      * 댓글 삭제 — 댓글 작성자 또는 게시글 작성자만 삭제 가능
      */
-    public void removeComment(Comment comment, User requester) {
+    public void removeComment(Long commentId, User requester) {
+        Comment comment = findComment(commentId);
         if (!comment.isWrittenBy(requester) && !this.isWrittenBy(requester)) {
             throw new IllegalArgumentException("댓글 삭제 권한이 없습니다.");
         }
@@ -96,6 +97,25 @@ public class Post {
      */
     public int getCommentCount() {
         return this.comments.size();
+    }
+
+    /**
+     * 댓글 수정 — Aggregate Root를 통해 Comment.edit()에 위임
+     */
+    public void editComment(Long commentId, String newContent, User requester) {
+        Comment targetComment = findComment(commentId);
+        targetComment.edit(newContent, requester);
+    }
+
+    /**
+     * Aggregate 내부에서 댓글 조회
+     */
+    private Comment findComment(Long commentId) {
+        return this.comments.stream()
+                .filter(c -> c.getId().equals(commentId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "해당 게시글에 존재하지 않는 댓글입니다. commentId=" + commentId));
     }
 
     // === 내부 검증 ===

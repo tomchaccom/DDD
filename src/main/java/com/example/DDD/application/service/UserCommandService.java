@@ -9,19 +9,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
+/**
+ * [Command] 유저 쓰기 전용 서비스
+ * - 생성/수정/삭제 + 다른 Command 서비스에서 사용하는 엔티티 조회
+ */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
-public class UserService {
+@Transactional
+public class UserCommandService {
 
     private final UserRepository userRepository;
 
     /**
      * 회원 가입
      */
-    @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         User user = User.create(request.username(), request.email());
         User savedUser = userRepository.save(user);
@@ -29,27 +30,8 @@ public class UserService {
     }
 
     /**
-     * 회원 단건 조회
+     * 회원 정보 수정 — 비즈니스 로직은 엔티티/값 객체에 위임
      */
-    public UserResponse getUser(Long userId) {
-        User user = findUserById(userId);
-        return UserResponse.from(user);
-    }
-
-    /**
-     * 회원 목록 조회
-     */
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(UserResponse::from)
-                .toList();
-    }
-
-    /**
-     * 회원 정보 수정
-     * - 비즈니스 로직(검증)은 엔티티/값 객체에 위임
-     */
-    @Transactional
     public UserResponse updateUser(Long userId, UserUpdateRequest request) {
         User user = findUserById(userId);
 
@@ -66,14 +48,14 @@ public class UserService {
     /**
      * 회원 삭제
      */
-    @Transactional
     public void deleteUser(Long userId) {
         User user = findUserById(userId);
         userRepository.delete(user);
     }
 
-    // === 내부 헬퍼 ===
-
+    /**
+     * 엔티티 조회 헬퍼 — 다른 Command 서비스에서도 사용
+     */
     public User findUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다. id=" + userId));
